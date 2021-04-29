@@ -6,6 +6,8 @@ from .dataset import Dataset
 from .models import EdgeModel, InpaintingModel
 from .utils import Progbar, create_dir, stitch_images, imsave
 from .metrics import PSNR, EdgeAccuracy
+import gc
+
 
 
 class EdgeConnect():
@@ -136,8 +138,13 @@ class EdgeConnect():
                 # inpaint with edge model
                 elif model == 3:
                     # train
+                    images = torch.nn.functional.interpolate(images, (227, 227))
+                    masks = torch.nn.functional.interpolate(masks, (227, 227))
+                    edges = torch.nn.functional.interpolate(edges, (227, 227))
+
                     if True or np.random.binomial(1, 0.5) > 0:
                         outputs = self.edge_model(images_gray, edges, masks)
+                        outputs = torch.nn.functional.interpolate(outputs, (227, 227))
                         outputs = outputs * masks + edges * (1 - masks)
                     else:
                         outputs = edges
@@ -207,6 +214,8 @@ class EdgeConnect():
                 # save model at checkpoints
                 if self.config.SAVE_INTERVAL and iteration % self.config.SAVE_INTERVAL == 0:
                     self.save()
+            #gc.collect()
+            #torch.cuda.empty_cache()
 
         print('\nEnd training....')
 
@@ -323,8 +332,12 @@ class EdgeConnect():
 
             # inpaint with edge model / joint model
             else:
+                images = torch.nn.functional.interpolate(images, (227, 227))
+                masks = torch.nn.functional.interpolate(masks, (227, 227))
                 edges = self.edge_model(images_gray, edges, masks).detach()
+                edges = torch.nn.functional.interpolate(edges, (227, 227))
                 outputs = self.inpaint_model(images, edges, masks)
+                outputs = torch.nn.functional.interpolate(outputs, (227, 227))
                 outputs_merged = (outputs * masks) + (images * (1 - masks))
 
             output = self.postprocess(outputs_merged)[0]

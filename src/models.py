@@ -86,7 +86,9 @@ class EdgeModel(BaseModel):
 
     def process(self, images, edges, masks):
         self.iteration += 1
-
+        images = nn.functional.interpolate(images, (227, 227))
+        edges = nn.functional.interpolate(edges, (227, 227))
+        masks = nn.functional.interpolate(masks, (227, 227))
 
         # zero optimizers
         self.gen_optimizer.zero_grad()
@@ -101,7 +103,10 @@ class EdgeModel(BaseModel):
 
         # discriminator loss
         dis_input_real = torch.cat((images, edges), dim=1)
-        dis_input_fake = torch.cat((images, outputs.detach()), dim=1)
+        images = nn.functional.interpolate(images, (227, 227))
+        real_outputs = nn.functional.interpolate(outputs.detach(), (227, 227))
+        #dis_input_fake = torch.cat((images, outputs.detach()), dim=1)
+        dis_input_fake = torch.cat((images, real_outputs), dim=1)
         dis_real, dis_real_feat = self.discriminator(dis_input_real)        # in: (grayscale(1) + edge(1))
         dis_fake, dis_fake_feat = self.discriminator(dis_input_fake)        # in: (grayscale(1) + edge(1))
         dis_real_loss = self.adversarial_loss(dis_real, True, True)
@@ -110,6 +115,7 @@ class EdgeModel(BaseModel):
 
 
         # generator adversarial loss
+        outputs = nn.functional.interpolate(outputs, (227, 227))
         gen_input_fake = torch.cat((images, outputs), dim=1)
         gen_fake, gen_fake_feat = self.discriminator(gen_input_fake)        # in: (grayscale(1) + edge(1))
         gen_gan_loss = self.adversarial_loss(gen_fake, True, False)
@@ -190,6 +196,8 @@ class InpaintingModel(BaseModel):
     def process(self, images, edges, masks):
         self.iteration += 1
 
+        images = torch.nn.functional.interpolate(images, (227, 227))
+
         # zero optimizers
         self.gen_optimizer.zero_grad()
         self.dis_optimizer.zero_grad()
@@ -199,6 +207,8 @@ class InpaintingModel(BaseModel):
         outputs = self(images, edges, masks)
         gen_loss = 0
         dis_loss = 0
+
+        outputs = torch.nn.functional.interpolate(outputs, (227, 227))
 
 
         # discriminator loss
@@ -247,7 +257,10 @@ class InpaintingModel(BaseModel):
         return outputs, gen_loss, dis_loss, logs
 
     def forward(self, images, edges, masks):
+        #images = nn.functional.interpolate(images, (224, 224))
+        edges = nn.functional.interpolate(edges, (227, 227))
         images_masked = (images * (1 - masks).float()) + masks
+        #images_masked = nn.functional.interpolate(images_masked, (224,224))
         inputs = torch.cat((images_masked, edges), dim=1)
         outputs = self.generator(inputs)                                    # in: [rgb(3) + edge(1)]
         return outputs

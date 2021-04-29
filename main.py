@@ -7,6 +7,8 @@ import argparse
 from shutil import copyfile
 from src.config import Config
 from src.edge_connect import EdgeConnect
+from multiprocessing import Process, freeze_support
+
 
 
 def main(mode=None):
@@ -15,6 +17,7 @@ def main(mode=None):
     Args:
         mode (int): 1: train, 2: test, 3: eval, reads from config file if not specified
     """
+
 
     config = load_config(mode)
 
@@ -51,7 +54,7 @@ def main(mode=None):
 
     # model training
     if config.MODE == 1:
-        config.print()
+        #config.print()
         print('\nstart training...\n')
         model.train()
 
@@ -131,4 +134,6 @@ def load_config(mode=None):
 
 
 if __name__ == "__main__":
+    freeze_support()
+    #Process(target=main).start()
     main()
