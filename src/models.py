@@ -6,6 +6,7 @@ from .networks import InpaintGenerator, EdgeGenerator, Discriminator
 from .loss import AdversarialLoss, PerceptualLoss, StyleLoss
 
 
+W = True
 class BaseModel(nn.Module):
     def __init__(self, name, config):
         super(BaseModel, self).__init__()
@@ -86,9 +87,9 @@ class EdgeModel(BaseModel):
 
     def process(self, images, edges, masks):
         self.iteration += 1
-        images = nn.functional.interpolate(images, (227, 227))
-        edges = nn.functional.interpolate(edges, (227, 227))
-        masks = nn.functional.interpolate(masks, (227, 227))
+        images = nn.functional.interpolate(images, (400,400))
+        edges = nn.functional.interpolate(edges, (400, 400))
+        masks = nn.functional.interpolate(masks, (400, 400))
 
         # zero optimizers
         self.gen_optimizer.zero_grad()
@@ -103,8 +104,8 @@ class EdgeModel(BaseModel):
 
         # discriminator loss
         dis_input_real = torch.cat((images, edges), dim=1)
-        images = nn.functional.interpolate(images, (227, 227))
-        real_outputs = nn.functional.interpolate(outputs.detach(), (227, 227))
+        images = nn.functional.interpolate(images, (400, 400))
+        real_outputs = nn.functional.interpolate(outputs.detach(), (400, 400))
         #dis_input_fake = torch.cat((images, outputs.detach()), dim=1)
         dis_input_fake = torch.cat((images, real_outputs), dim=1)
         dis_real, dis_real_feat = self.discriminator(dis_input_real)        # in: (grayscale(1) + edge(1))
@@ -115,7 +116,7 @@ class EdgeModel(BaseModel):
 
 
         # generator adversarial loss
-        outputs = nn.functional.interpolate(outputs, (227, 227))
+        outputs = nn.functional.interpolate(outputs, (400, 400))
         gen_input_fake = torch.cat((images, outputs), dim=1)
         gen_fake, gen_fake_feat = self.discriminator(gen_input_fake)        # in: (grayscale(1) + edge(1))
         gen_gan_loss = self.adversarial_loss(gen_fake, True, False)
@@ -140,6 +141,9 @@ class EdgeModel(BaseModel):
         return outputs, gen_loss, dis_loss, logs
 
     def forward(self, images, edges, masks):
+        edges = nn.functional.interpolate(edges, (400, 400))
+        images = nn.functional.interpolate(images, (400, 400))
+        masks = nn.functional.interpolate(masks, (400, 400))
         edges_masked = (edges * (1 - masks))
         images_masked = (images * (1 - masks)) + masks
         inputs = torch.cat((images_masked, edges_masked, masks), dim=1)
@@ -151,8 +155,15 @@ class EdgeModel(BaseModel):
             dis_loss.backward()
         self.dis_optimizer.step()
 
+        global W
+        #print(W)
         if gen_loss is not None:
-            gen_loss.backward()
+            if W:
+                gen_loss.backward(retain_graph=True)
+                W = False
+            else:
+                gen_loss.backward()
+
         self.gen_optimizer.step()
 
 
@@ -196,7 +207,7 @@ class InpaintingModel(BaseModel):
     def process(self, images, edges, masks):
         self.iteration += 1
 
-        images = torch.nn.functional.interpolate(images, (227, 227))
+        images = torch.nn.functional.interpolate(images, (400, 400))
 
         # zero optimizers
         self.gen_optimizer.zero_grad()
@@ -208,7 +219,7 @@ class InpaintingModel(BaseModel):
         gen_loss = 0
         dis_loss = 0
 
-        outputs = torch.nn.functional.interpolate(outputs, (227, 227))
+        outputs = torch.nn.functional.interpolate(outputs, (400, 400))
 
 
         # discriminator loss
@@ -258,7 +269,7 @@ class InpaintingModel(BaseModel):
 
     def forward(self, images, edges, masks):
         #images = nn.functional.interpolate(images, (224, 224))
-        edges = nn.functional.interpolate(edges, (227, 227))
+        edges = nn.functional.interpolate(edges, (400, 400))
         images_masked = (images * (1 - masks).float()) + masks
         #images_masked = nn.functional.interpolate(images_masked, (224,224))
         inputs = torch.cat((images_masked, edges), dim=1)
@@ -269,5 +280,5 @@ class InpaintingModel(BaseModel):
         dis_loss.backward()
         self.dis_optimizer.step()
 
-        gen_loss.backward()
+        gen_loss.backward(retain_graph=True)
         self.gen_optimizer.step()

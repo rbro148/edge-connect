@@ -12,9 +12,9 @@ TRAIN_FLIST: ./datasets/paris_train.flist
 VAL_FLIST: ./datasets/paris_val.flist
 TEST_FLIST: ./datasets/paris_test.flist
 
-#TRAIN_EDGE_FLIST: ./datasets/places2_edges_train.flist
+TRAIN_EDGE_FLIST: ./datasets/edges_train.flist
 #VAL_EDGE_FLIST: ./datasets/places2_edges_val.flist
-#TEST_EDGE_FLIST: ./datasets/places2_edges_test.flist
+TEST_EDGE_FLIST: ./datasets/edges_test.flist
 
 TRAIN_MASK_FLIST: ./datasets/masks_train.flist
 VAL_MASK_FLIST: ./datasets/masks_val.flist

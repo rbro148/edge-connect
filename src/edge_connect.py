@@ -86,7 +86,7 @@ class EdgeConnect():
         model = self.config.MODEL
         max_iteration = int(float((self.config.MAX_ITERS)))
         total = len(self.train_dataset)
-
+        print(max_iteration)
         if total == 0:
             print('No training data was provided! Check \'TRAIN_FLIST\' value in the configuration file.')
             return
@@ -138,13 +138,13 @@ class EdgeConnect():
                 # inpaint with edge model
                 elif model == 3:
                     # train
-                    images = torch.nn.functional.interpolate(images, (227, 227))
-                    masks = torch.nn.functional.interpolate(masks, (227, 227))
-                    edges = torch.nn.functional.interpolate(edges, (227, 227))
+                    images = torch.nn.functional.interpolate(images, (400, 400))
+                    masks = torch.nn.functional.interpolate(masks, (400, 400))
+                    edges = torch.nn.functional.interpolate(edges, (400, 400))
 
                     if True or np.random.binomial(1, 0.5) > 0:
                         outputs = self.edge_model(images_gray, edges, masks)
-                        outputs = torch.nn.functional.interpolate(outputs, (227, 227))
+                        outputs = torch.nn.functional.interpolate(outputs, (400, 400))
                         outputs = outputs * masks + edges * (1 - masks)
                     else:
                         outputs = edges
@@ -322,22 +322,30 @@ class EdgeConnect():
 
             # edge model
             if model == 1:
+                edges = torch.nn.functional.interpolate(edges, (400, 400))
+                masks = torch.nn.functional.interpolate(masks, (400, 400))
+                images_gray = torch.nn.functional.interpolate(images_gray, (400, 400))
                 outputs = self.edge_model(images_gray, edges, masks)
+                outputs = torch.nn.functional.interpolate(outputs, (400, 400))
                 outputs_merged = (outputs * masks) + (edges * (1 - masks))
 
             # inpaint model
             elif model == 2:
+                edges = torch.nn.functional.interpolate(edges, (400, 400))
+                masks = torch.nn.functional.interpolate(masks, (400, 400))
+                images = torch.nn.functional.interpolate(images, (400, 400))
                 outputs = self.inpaint_model(images, edges, masks)
+                outputs = torch.nn.functional.interpolate(outputs, (400, 400))
                 outputs_merged = (outputs * masks) + (images * (1 - masks))
 
             # inpaint with edge model / joint model
             else:
-                images = torch.nn.functional.interpolate(images, (227, 227))
-                masks = torch.nn.functional.interpolate(masks, (227, 227))
+                images = torch.nn.functional.interpolate(images, (400, 400))
+                masks = torch.nn.functional.interpolate(masks, (400, 400))
                 edges = self.edge_model(images_gray, edges, masks).detach()
-                edges = torch.nn.functional.interpolate(edges, (227, 227))
+                edges = torch.nn.functional.interpolate(edges, (400, 400))
                 outputs = self.inpaint_model(images, edges, masks)
-                outputs = torch.nn.functional.interpolate(outputs, (227, 227))
+                outputs = torch.nn.functional.interpolate(outputs, (400, 400))
                 outputs_merged = (outputs * masks) + (images * (1 - masks))
 
             output = self.postprocess(outputs_merged)[0]
